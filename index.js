@@ -4,6 +4,24 @@ const server = express();
 
 server.use(express.json());
 
+server.use((req, res, next) => {
+  console.time("Request");
+
+  console.log(`Método ${req.method}; URL: ${req.url}`);
+
+  next();
+
+  console.timeEnd("Request");
+});
+
+function checkUserExists(req, res, next) {
+  if (!req.body.name) {
+    return res.status(400).json({ error: "User not found on request body" });
+  }
+
+  return next();
+}
+
 server.get("/send", (req, res) => {
   return res.send("Hello World");
 });
@@ -29,7 +47,19 @@ server.get("/routes/:id", (req, res) => {
 // Request Body = { "name": "Henrique Tavares", "email": "ihenrits@gmail.com" }
 const users = ["Diego", "Henrique"];
 
-server.post("/users", (req, res) => {
+function checkUserinArray(req, res, next) {
+  const user = users[req.params.index];
+
+  if (!user) {
+    return res.status(400).json({ error: "User does not exists" });
+  }
+
+  req.user = user;
+
+  return next();
+}
+
+server.post("/users", checkUserExists, (req, res) => {
   const { name } = req.body;
 
   users.push(name);
@@ -37,7 +67,7 @@ server.post("/users", (req, res) => {
   return res.json(users);
 });
 
-server.put("/users/:index", (req, res) => {
+server.put("/users/:index", checkUserExists, (req, res) => {
   const { index } = req.params;
   const { name } = req.body;
 
@@ -46,7 +76,7 @@ server.put("/users/:index", (req, res) => {
   return res.json(users);
 });
 
-server.delete("/users/:index", (req, res) => {
+server.delete("/users/:index", checkUserinArray, (req, res) => {
   const { index } = req.params;
 
   users.splice(index, 1);
